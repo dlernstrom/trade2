@@ -3,7 +3,8 @@ import os
 from decimal import Decimal
 
 from constants import KLINE_PATH, KLINE_HEADERS
-from kline import get_kline, get_file_for_time, get_last_trans_close_time, kline_row_to_dict
+from exceptions import KlineFileDoesNotExistError
+from kline import get_kline, get_file_for_time, get_last_trans_close_time, kline_row_to_dict, get_first_kline
 
 
 class Asset:
@@ -108,7 +109,14 @@ class Asset:
         if open_file is not None:
             open_file.close()
 
+    def update_from_first_kline(self):
+        self.recent_kline = get_first_kline(self.history_path)
+
     def update_from_exchange(self, as_of_time):
-        """Update the values that we store locally"""
-        kline = get_kline(as_of_time, self.history_path)
+        """Update the values that we store locally, assumes that the kline in question exists"""
+        try:
+            kline = get_kline(as_of_time, self.history_path)
+        except KlineFileDoesNotExistError:
+            return False
         self.recent_kline = kline
+        return True

@@ -16,7 +16,9 @@ class Assets:
         assets = list(self._assets.values())
         # The process activity is 2 part, first we update the exchange information
         for asset in assets:
-            asset.update_from_exchange(as_of_time)
+            if asset.update_from_exchange(as_of_time) is False:
+                # returns False if there is either no kline available or the as_of_time is before we have data
+                continue
             # then we check orders
             # then we place new orders
 

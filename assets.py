@@ -10,17 +10,29 @@ class Assets:
         self._assets = {balance_entry['asset']: Asset(balance_entry, client) for balance_entry in info['balances']
                         if balance_entry['asset'] != 'USD'}
         self.update_historical_klines()
+        self._current_as_of_time = None
 
     def process(self, as_of_time):
         """Run the process, putting in orders and such"""
+        self._current_as_of_time = as_of_time
         assets = list(self._assets.values())
         # The process activity is 2 part, first we update the exchange information
         for asset in assets:
             if asset.update_from_exchange(as_of_time) is False:
                 # returns False if there is either no kline available or the as_of_time is before we have data
                 continue
-            # then we check orders
+            # then we check orders (from the "assets" level)
+            self.check_orders()
             # then we place new orders
+            asset.place_new_orders()
+
+    def check_orders(self):
+        """Check open orders to see if any of the limit sell or limit buy orders have been filled"""
+        # we do this at the high level asset / client perspective
+        # for processing historical data, we'll check orders against the new kline
+
+    def print_position(self):
+        print(f'current position {self._current_as_of_time}')
 
     def update_tickers(self):
         """Updates each asset with the 24 hour ticker data, weight: 40"""

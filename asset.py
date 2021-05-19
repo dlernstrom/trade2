@@ -5,6 +5,7 @@ from decimal import Decimal
 from constants import KLINE_PATH, KLINE_HEADERS
 from exceptions import KlineFileDoesNotExistError
 from kline import get_kline, get_file_for_time, get_last_trans_close_time, kline_row_to_dict, get_first_kline
+from orders.order import Order
 
 
 class Asset:
@@ -114,9 +115,31 @@ class Asset:
 
     def update_from_exchange(self, as_of_time):
         """Update the values that we store locally, assumes that the kline in question exists"""
+        self.update_historical_klines()
         try:
             kline = get_kline(as_of_time, self.history_path)
         except KlineFileDoesNotExistError:
             return False
         self.recent_kline = kline
         return True
+
+    @property
+    def current(self):
+        return Decimal(self.recent_kline['close'])
+
+    def get_order_for_range(self):
+        # if no open orders, and price is higher than the tracked high, then raise the tracked high
+        if self.current > self.tracked_peak:
+            self.tracked_peak = self.current
+        for order in self.orders:
+            if order.top >= self.current >= order.bottom:
+                return order
+        # if price is lower than our lowest order, then put in a new limit buy
+
+    def place_new_orders(self):
+        """Here's where we look at our tracked price and place limit buy orders (if we have cash to tie up)
+        or limit sell orders (if we've taken a position).
+        """
+        if self.tracked_peak is None and self.recent_kline is not None:
+            self.tracked_peak = self.current
+

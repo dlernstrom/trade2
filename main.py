@@ -14,7 +14,7 @@ os.chdir(PROJECT_ROOT)
 
 
 def run_app():
-    online = True
+    online = False
     if online:
         client = LiveClient(API_KEY, API_SECRET, tld='us')
     else:
@@ -30,6 +30,7 @@ def run_app():
         current_time = start_timestamp
         while current_time < int(datetime.datetime.now().astimezone(datetime.timezone.utc).timestamp() * 1000):
             assets.process(current_time)
+            assets.print_position()
             current_time += interval
 
     # assets.update_tickers()

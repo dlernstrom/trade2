@@ -66,10 +66,13 @@ def get_last_kline(history_path):
             last_entry = row
     if last_entry is None:
         raise KlineFileDoesNotExistError(f'requested kline file does not exist')
+    return last_entry
 
 
 def get_last_trans_close_time(path):
     last_entry = get_last_kline(path)
+    if last_entry is None:
+        raise KlineFileDoesNotExistError('last entry is None')
     print(f'last_entry was {last_entry}')
     return int(last_entry['close_time'])
 

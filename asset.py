@@ -7,6 +7,9 @@ from exceptions import KlineFileDoesNotExistError
 from kline import get_kline, get_file_for_time, get_last_trans_close_time, kline_row_to_dict, get_first_kline
 from orders.order import Order
 
+DESIRED_SELL_PERCENTAGE = 1.1
+DESIRED_SELL_RECAPTURE = 0.01
+
 
 class Asset:
     """The strategy behind an asset is that we will track the peak price locally.
@@ -21,7 +24,7 @@ class Asset:
         self.free = Decimal(balance_entry['free'])  # our accumulation of this asset
         self.locked = Decimal(balance_entry['locked'])  # locked up in buy/sell limit orders
         self.orders = []
-        self.tracked_peak = None
+        self.tracked_peak = None  # the highest price that we've seen that is 10% above our open buy order
         self.recent_ticker = None
         self.recent_kline = None
 
@@ -120,6 +123,12 @@ class Asset:
             kline = get_kline(as_of_time, self.history_path)
         except KlineFileDoesNotExistError:
             return False
+        """
+        if self.recent_kline is None:
+            self.recent_kline = kline
+            self.tracked_peak = self.current
+            return True
+        """
         self.recent_kline = kline
         return True
 
@@ -136,10 +145,33 @@ class Asset:
                 return order
         # if price is lower than our lowest order, then put in a new limit buy
 
+    def check_orders(self):
+        """Check open orders to see if any of the limit sell or limit buy orders have been filled"""
+        if self.tracked_peak is None:
+            self.tracked_peak = self.current
+        # iterate through orders, capitalize on any limit sell or limit buy that existed within the range
+        for order in self.orders:
+            if order.order_type == Order.LIMIT_BUY and Decimal(self.recent_kline['low']) < order.limit_price:
+                print('order was filled')
+                self.orders.remove(order)
+                self.place_limit_sell(order.limit_price * DESIRED_SELL_PERCENTAGE)
+            if order.order_type == Order.LIMIT_SELL and Decimal(self.recent_kline['high']) > order.limit_price:
+                print('sell order was filled')
+
+    def place_limit_buy(self, desired_price):
+        """Place a limit buy"""
+
+    def place_limit_sell(self, desired_price):
+        """Place a limit sell, sell all but recaptured amount"""
+
     def place_new_orders(self):
         """Here's where we look at our tracked price and place limit buy orders (if we have cash to tie up)
         or limit sell orders (if we've taken a position).
         """
-        if self.tracked_peak is None and self.recent_kline is not None:
-            self.tracked_peak = self.current
+        # here are scenarios...
+        # if there are no orders at all, then we place a limit buy that is 10% below the tracked peak
+        if len(self.orders) == 0:
+            self.place_limit_buy(self.tracked_peak * 0.9)
+        # if we are within the buy/sell point of an existing order, we just ride it.
+        # if we are below any recent orders by more than 10%, we need to place a new order
 

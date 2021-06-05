@@ -22,14 +22,9 @@ class Assets:
                 # returns False if there is either no kline available or the as_of_time is before we have data
                 continue
             # then we check orders (from the "assets" level)
-            self.check_orders()
+            asset.check_orders()
             # then we place new orders
             asset.place_new_orders()
-
-    def check_orders(self):
-        """Check open orders to see if any of the limit sell or limit buy orders have been filled"""
-        # we do this at the high level asset / client perspective
-        # for processing historical data, we'll check orders against the new kline
 
     def print_position(self):
         print(f'current position {self._current_as_of_time}')
